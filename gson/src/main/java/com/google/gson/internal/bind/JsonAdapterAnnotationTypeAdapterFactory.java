@@ -16,6 +16,9 @@
 
 package com.google.gson.internal.bind;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.google.gson.Gson;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -31,6 +34,21 @@ import com.google.gson.reflect.TypeToken;
  */
 public final class JsonAdapterAnnotationTypeAdapterFactory implements TypeAdapterFactory {
 
+  @SuppressWarnings("rawtypes")
+  private final ThreadLocal<Map<Class, TypeAdapter>> activeJsonAdapterClasses = new ThreadLocal<Map<Class, TypeAdapter>>() {
+    @Override protected Map<Class, TypeAdapter> initialValue() {
+      // No need for a thread-safe map since we are using it in a single thread
+      return new HashMap<Class, TypeAdapter>();
+    }
+  };
+  @SuppressWarnings("rawtypes")
+  private final ThreadLocal<Map<Class, TypeAdapterFactory>> activeJsonAdapterFactories = new ThreadLocal<Map<Class, TypeAdapterFactory>>() {
+    @Override protected Map<Class, TypeAdapterFactory> initialValue() {
+      // No need for a thread-safe map since we are using it in a single thread
+      return new HashMap<Class, TypeAdapterFactory>();
+    }
+  };
+
   private final ConstructorConstructor constructorConstructor;
 
   public JsonAdapterAnnotationTypeAdapterFactory(ConstructorConstructor constructorConstructor) {
@@ -40,33 +58,69 @@ public final class JsonAdapterAnnotationTypeAdapterFactory implements TypeAdapte
   @SuppressWarnings("unchecked")
   @Override
   public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> targetType) {
-    JsonAdapter annotation = targetType.getRawType().getAnnotation(JsonAdapter.class);
+    Class<? super T> rawType = targetType.getRawType();
+    JsonAdapter annotation = rawType.getAnnotation(JsonAdapter.class);
     if (annotation == null) {
       return null;
     }
     return (TypeAdapter<T>) getTypeAdapter(constructorConstructor, gson, targetType, annotation);
   }
 
-  @SuppressWarnings("unchecked") // Casts guarded by conditionals.
-  static TypeAdapter<?> getTypeAdapter(ConstructorConstructor constructorConstructor, Gson gson,
-      TypeToken<?> fieldType, JsonAdapter annotation) {
+  public <T> TypeAdapter<T> getDelegateAdapter(Gson gson, TypeAdapterFactory skipPast, TypeToken<T> targetType) {
+    TypeAdapterFactory factory = getDelegateAdapterFactory(targetType);
+    if (factory == skipPast) factory = null;
+    return factory == null ? null: factory.create(gson, targetType);
+  }
+
+  public <T> TypeAdapterFactory getDelegateAdapterFactory(TypeToken<T> targetType) {
+    Class<?> annotatedClass = targetType.getRawType();
+    JsonAdapter annotation = annotatedClass.getAnnotation(JsonAdapter.class);
+    if (annotation == null) {
+      return null;
+    }
+    return getTypeAdapterFactory(annotatedClass, annotation, constructorConstructor);
+  }
+
+  @SuppressWarnings({ "unchecked", "rawtypes" }) // Casts guarded by conditionals.
+  TypeAdapter<?> getTypeAdapter(ConstructorConstructor constructorConstructor, Gson gson,
+      TypeToken<?> type, JsonAdapter annotation) {
     Class<?> value = annotation.value();
+    Class<?> rawType = type.getRawType();
     TypeAdapter<?> typeAdapter;
     if (TypeAdapter.class.isAssignableFrom(value)) {
-      Class<TypeAdapter<?>> typeAdapterClass = (Class<TypeAdapter<?>>) value;
-      typeAdapter = constructorConstructor.get(TypeToken.get(typeAdapterClass)).construct();
+      Map<Class, TypeAdapter> adapters = activeJsonAdapterClasses.get();
+      typeAdapter = adapters.get(rawType);
+      if (typeAdapter == null) {
+        Class<TypeAdapter<?>> typeAdapterClass = (Class<TypeAdapter<?>>) value;
+        typeAdapter = constructorConstructor.get(TypeToken.get(typeAdapterClass)).construct();
+        adapters.put(rawType, typeAdapter);
+      }
     } else if (TypeAdapterFactory.class.isAssignableFrom(value)) {
-      Class<TypeAdapterFactory> typeAdapterFactory = (Class<TypeAdapterFactory>) value;
-      typeAdapter = constructorConstructor.get(TypeToken.get(typeAdapterFactory))
-          .construct()
-          .create(gson, fieldType);
+      TypeAdapterFactory factory = getTypeAdapterFactory(rawType, annotation, constructorConstructor);
+      typeAdapter = factory == null ? null : factory.create(gson, type);
     } else {
       throw new IllegalArgumentException(
-          "@JsonAdapter value must be TypeAdapter or TypeAdapterFactory reference.");
+          "@JsonAdapter value must be TypeAdapter, TypeAdapterFactory, JsonSerializer or JsonDeserializer reference.");
     }
     if (typeAdapter != null) {
       typeAdapter = typeAdapter.nullSafe();
     }
     return typeAdapter;
+  }
+
+
+  @SuppressWarnings({ "unchecked", "rawtypes" }) // Casts guarded by conditionals.
+  TypeAdapterFactory getTypeAdapterFactory(Class<?> fieldRawType, JsonAdapter annotation, ConstructorConstructor constructorConstructor) {
+    Class<?> value = annotation.value();
+    if (!TypeAdapterFactory.class.isAssignableFrom(value)) return null;
+    Map<Class, TypeAdapterFactory> adapterFactories = activeJsonAdapterFactories.get();
+    TypeAdapterFactory factory = adapterFactories.get(fieldRawType);
+    if (factory == null) {
+      Class<TypeAdapterFactory> typeAdapterFactoryClass = (Class<TypeAdapterFactory>) value;
+      factory = constructorConstructor.get(TypeToken.get(typeAdapterFactoryClass))
+          .construct();
+      adapterFactories.put(fieldRawType, factory);
+    }
+    return factory;
   }
 }
