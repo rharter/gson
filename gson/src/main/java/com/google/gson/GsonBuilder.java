@@ -78,6 +78,7 @@ import static com.google.gson.Gson.DEFAULT_SPECIALIZE_FLOAT_VALUES;
 public final class GsonBuilder {
   private Excluder excluder = Excluder.DEFAULT;
   private LongSerializationPolicy longSerializationPolicy = LongSerializationPolicy.DEFAULT;
+  private NamingStrategy namingStrategy = NamingPolicy.IDENTITY;
   private FieldNamingStrategy fieldNamingPolicy = FieldNamingPolicy.IDENTITY;
   private final Map<Type, InstanceCreator<?>> instanceCreators
       = new HashMap<Type, InstanceCreator<?>>();
@@ -275,6 +276,31 @@ public final class GsonBuilder {
   }
 
   /**
+   * Configures Gson to apply a specific naming policy to an object's properties during
+   * serialization and deserialization.
+   *
+   * @param namingConvention the JSON field naming convention to use for serialization and
+   * deserialization.
+   * @return a reference to this {@code GsonBuilder} object to fulfill the "Builder" pattern
+   */
+  public GsonBuilder setNamingPolicy(NamingPolicy namingPolicy) {
+    this.namingStrategy = namingPolicy;
+    return this;
+  }
+
+  /**
+   * Configures Gson to apply a specific naming policy to an object's properties during
+   * serialization and deserialization.
+   *
+   * @param namingStrategy the actual naming strategy to apply to the
+   * @return a reference to this {@code GsonBuilder} object to fulfill the "Builder" pattern
+   */
+  public GsonBuilder setNamingStrategy(NamingStrategy namingStrategy) {
+    this.namingStrategy = namingStrategy;
+    return this;
+  }
+
+  /**
    * Configures Gson to apply a specific naming policy to an object's field during serialization
    * and deserialization.
    *
@@ -283,7 +309,7 @@ public final class GsonBuilder {
    * @return a reference to this {@code GsonBuilder} object to fulfill the "Builder" pattern
    */
   public GsonBuilder setFieldNamingPolicy(FieldNamingPolicy namingConvention) {
-    this.fieldNamingPolicy = namingConvention;
+    this.namingStrategy = namingConvention;
     return this;
   }
 
@@ -294,6 +320,7 @@ public final class GsonBuilder {
    * @param fieldNamingStrategy the actual naming strategy to apply to the fields
    * @return a reference to this {@code GsonBuilder} object to fulfill the "Builder" pattern
    * @since 1.3
+   * @deprecated
    */
   public GsonBuilder setFieldNamingStrategy(FieldNamingStrategy fieldNamingStrategy) {
     this.fieldNamingPolicy = fieldNamingStrategy;

@@ -27,19 +27,14 @@ import java.util.Locale;
  *
  * @author Inderjeet Singh
  * @author Joel Leitch
- * @deprecated Use {@link NamingPolicy} instead.
  */
-public enum FieldNamingPolicy implements FieldNamingStrategy, NamingStrategy {
+public enum NamingPolicy implements NamingStrategy {
 
   /**
    * Using this naming policy with Gson will ensure that the field name is
    * unchanged.
    */
   IDENTITY() {
-    @Override public String translateName(Field f) {
-      return translateName(f.getName());
-    }
-
     @Override public String translateName(String name) {
       return name;
     }
@@ -56,10 +51,6 @@ public enum FieldNamingPolicy implements FieldNamingStrategy, NamingStrategy {
    * </ul>
    */
   UPPER_CAMEL_CASE() {
-    @Override public String translateName(Field f) {
-      return translateName(f.getName());
-    }
-
     @Override public String translateName(String name) {
       return upperCaseFirstLetter(name);
     }
@@ -79,10 +70,6 @@ public enum FieldNamingPolicy implements FieldNamingStrategy, NamingStrategy {
    * @since 1.4
    */
   UPPER_CAMEL_CASE_WITH_SPACES() {
-    @Override public String translateName(Field f) {
-      return translateName(f.getName());
-    }
-
     @Override public String translateName(String name) {
       return upperCaseFirstLetter(separateCamelCase(name, " "));
     }
@@ -101,10 +88,6 @@ public enum FieldNamingPolicy implements FieldNamingStrategy, NamingStrategy {
    * </ul>
    */
   LOWER_CASE_WITH_UNDERSCORES() {
-    @Override public String translateName(Field f) {
-      return translateName(f.getName());
-    }
-
     @Override public String translateName(String name) {
       return separateCamelCase(name, "_").toLowerCase(Locale.ENGLISH);
     }
@@ -128,10 +111,6 @@ public enum FieldNamingPolicy implements FieldNamingStrategy, NamingStrategy {
    * @since 1.4
    */
   LOWER_CASE_WITH_DASHES() {
-    @Override public String translateName(Field f) {
-      return translateName(f.getName());
-    }
-
     @Override public String translateName(String name) {
       return separateCamelCase(name, "-").toLowerCase(Locale.ENGLISH);
     }

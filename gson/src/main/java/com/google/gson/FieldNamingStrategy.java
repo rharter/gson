@@ -26,6 +26,7 @@ import java.lang.reflect.Field;
  * @author Inderjeet Singh
  * @author Joel Leitch
  * @since 1.3
+ * @deprecated Use {@link NamingStrategy} instead.
  */
 public interface FieldNamingStrategy {
 
@@ -36,5 +37,5 @@ public interface FieldNamingStrategy {
    * @return the translated field name.
    * @since 1.3
    */
-  public String translateName(Field f);
+  public abstract String translateName(Field f);
 }
